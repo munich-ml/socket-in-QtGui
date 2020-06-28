@@ -10,6 +10,7 @@ from PyQt5.QtWidgets import QMainWindow, QApplication
 from PyQt5.QtCore import QThread, pyqtSignal
 
 
+CODING = "utf-8"
 PORT_DEFAULT = 1234
 HEADER_LENGTH = 10     # number of header bytes
 
@@ -36,7 +37,12 @@ class ServerMainWindow(QMainWindow, Ui_server):
     
     def on_button_send(self):
         msg = self.lineEditMsg.text()
-        self.print_to_log("sending " + msg)
+        try:
+            self.server.sending_jobs.append(msg)
+            self.print_to_log("sending " + msg)
+        except Exception as e:
+            self.print_to_log(e)
+        
         
         
     def on_button_start_stop(self):
@@ -79,7 +85,7 @@ class ServerThread(QThread):
 
     def __send(self, msg):
         header_msg = f"{len(msg):<{HEADER_LENGTH}}" + msg
-        self.client_socket.send(bytes(header_msg, "utf-8"))                
+        self.client_socket.send(bytes(header_msg, CODING))                
             
     
     def run(self):
@@ -94,13 +100,11 @@ class ServerThread(QThread):
             
             while not self.exiting:
                 if len(self.sending_jobs):
-                    print("sending job")
-                    #self.signalResultReady.emit(fib)
-                
-                self.__send("the time is " + str(dt.datetime.now().astimezone()))
+                    self.__send(self.sending_jobs.pop())
                    
-                time.sleep(2)
-        print("run method is exiting")
+                time.sleep(1e-4)
+        
+        self.sigStatUpdate.emit("run method is exiting")
 
 
 if __name__ == '__main__':

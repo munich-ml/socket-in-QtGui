@@ -98,3 +98,13 @@ class Ui_server(object):
         self.buttonSend.setText(_translate("server", "send"))
         self.buttonStartStop.setText(_translate("server", "start stop"))
 
+
+if __name__ == "__main__":
+    import sys
+    app = QtWidgets.QApplication(sys.argv)
+    server = QtWidgets.QMainWindow()
+    ui = Ui_server()
+    ui.setupUi(server)
+    server.show()
+    sys.exit(app.exec_())
+
