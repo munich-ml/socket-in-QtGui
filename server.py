@@ -91,11 +91,14 @@ class ServerThread(QThread):
     def run(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
             server_socket.bind((socket.gethostname(), self.port))
-            server_socket.listen(5)
-            self.client_socket, client_addr = server_socket.accept()
             
-            self.sigStatUpdate.emit("server connected to " + str(client_addr))
+            # modifiy the socket to allow address reuse
+            server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             
+            # wait for a client to connect
+            server_socket.listen()
+            self.client_socket, client_addr = server_socket.accept()            
+            self.sigStatUpdate.emit("server connected to " + str(client_addr))            
             self.__send("Welcome to the server")
             
             while not self.exiting:

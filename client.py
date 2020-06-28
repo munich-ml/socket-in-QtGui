@@ -13,7 +13,7 @@ client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client_socket.connect((socket.gethostname(), PORT_DEFAULT))
 
 while True:
-    msg_length = int(client_socket.recv(HEADER_LENGTH))
+    msg_length = int(client_socket.recv(HEADER_LENGTH).strip())
     msg = client_socket.recv(msg_length)
     print(msg.decode(CODING))
     
