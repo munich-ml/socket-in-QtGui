@@ -19,16 +19,21 @@ class HTesterTcpIpClient():
             self.connect()   
         
     
+    def __str__(self):
+        return str(self.socket)
+    
+    
     def connect(self):
         if not self.connected:
             try:
-                self.set_blocking(True)   # socket mus be blocking for connet
+                self.set_blocking(True)   # socket must be blocking for connet
                 self.socket.connect((socket.gethostname(), self.port))
                 self.set_blocking(False)   # default for this class
+                print("Connected to server", self.socket.getpeername())
                 self.connected = True
                 
-            except Exception as e:
-                print("Could not connect to server.\n", str(e))
+            except Exception:
+                print("Could not connect to server.")
                 self.connected = False
         return self.connected
     
@@ -47,11 +52,16 @@ class HTesterTcpIpClient():
     
 
     def receive(self):
+        """
+        Receives and returns a message.
+        
+        May return None when used "non-blocking"
+        """
         if self.connected:
             try:
-                msg_length = int(self.socket.recv(HEADER_LENGTH).strip())
-                msg = self.socket.recv(msg_length)
-                return msg.decode(CODING)
+                # Expected message starts with a fixed-length header
+                msg_length = int(self.socket.recv(HEADER_LENGTH).decode(CODING))
+                return self.socket.recv(msg_length).decode(CODING)
 
             except IOError as e:
                 # This is normal on non blocking connections - when there are no incoming data error is going to be raised
@@ -68,4 +78,5 @@ class HTesterTcpIpClient():
     
     
 if __name__ == "__main__":
-    client = HTesterTcpIpClient(PORT_DEFAULT)
+    client = HTesterTcpIpClient(port=PORT_DEFAULT, auto_connect=True)
+    

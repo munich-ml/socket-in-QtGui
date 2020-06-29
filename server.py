@@ -12,7 +12,7 @@ from PyQt5.QtCore import QThread, pyqtSignal
 
 CODING = "utf-8"
 PORT_DEFAULT = 1234
-HEADER_LENGTH = 10     # number of header bytes
+HEADER_LENGTH = 10     # number of header bytes. Fixed length header
 
 class ServerMainWindow(QMainWindow, Ui_server):
     """
@@ -84,8 +84,16 @@ class ServerThread(QThread):
 
 
     def __send(self, msg):
-        header_msg = f"{len(msg):<{HEADER_LENGTH}}" + msg
-        self.client_socket.send(bytes(header_msg, CODING))                
+        """
+        Input <str> msg is added to a fixed length header, converted to <bytes>
+        and send to the client socket.
+        """
+        # create the fixed length header    '00000022' = 22 bytes
+        
+        header = str(len(msg))
+        header = (HEADER_LENGTH - len(header)) * "0" + header
+        
+        self.client_socket.send(bytes(header+msg, CODING))                
             
     
     def run(self):
