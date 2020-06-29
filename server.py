@@ -6,6 +6,7 @@ import time
 import datetime as dt
 import socket
 import json
+import errno
 from server_ui import Ui_server
 from PyQt5.QtWidgets import QMainWindow, QApplication
 from PyQt5.QtCore import QThread, pyqtSignal
@@ -52,6 +53,8 @@ class ServerMainWindow(QMainWindow, Ui_server):
             self.print_to_log("starting the server")
             self.server = ServerThread(self.spinBoxPort.value())
             self.server.sigStatUpdate.connect(self.print_to_log)
+            self.server.sigMsgRcvd.connect(self.incoming_msg)
+            self.server.sigClientDisconnected.connect(self.on_button_start_stop)
             self.server.start()
         else:
             self.print_to_log("terminating the server")
@@ -71,9 +74,14 @@ class ServerMainWindow(QMainWindow, Ui_server):
         self.textBrowser.append(dt.datetime.now().strftime("%H:%M:%S ") + text)
 
 
+    def incoming_msg(self, msg):
+        self.print_to_log("msg received '{}'".format(msg[0]))
+        
+
 class ServerThread(QThread):
     sigStatUpdate = pyqtSignal(str)
     sigMsgRcvd = pyqtSignal(list)
+    sigClientDisconnected = pyqtSignal()
 
     def __init__(self, port):
         super(ServerThread, self).__init__()
@@ -97,7 +105,33 @@ class ServerThread(QThread):
         
         # send header + json object
         self.client_socket.send(bytes(header+json_obj, CODING))                
-            
+
+    def __receive(self):
+        """
+        Receives, deserializes from json and returns the object.
+        Returns None when there is nothing to receive
+        """
+        try:
+            # Expected message starts with a fixed-length header
+            msg_length = int(self.client_socket.recv(HEADER_LENGTH).decode(CODING))
+            json_obj = self.client_socket.recv(msg_length).decode(CODING)
+            return json.loads(json_obj)
+
+        except IOError as e:
+            # This is normal on non blocking connections - when there are no incoming data error is going to be raised
+            # Some operating systems will indicate that using AGAIN, and some using WOULDBLOCK error code
+            # We are going to check for both - if one of them - that's expected, means no incoming data, continue as normal
+            if e.errno in (errno.EAGAIN, errno.EWOULDBLOCK):
+                return None
+
+            # If we got different error code, a "real" error occured
+            self.sigStatUpdate.emit("IOError, client probably disconnected.")
+            self.sigClientDisconnected.emit()
+
+        except ValueError:
+            self.sigStatUpdate.emit("ValueError, client probably disconnected.")
+            self.sigClientDisconnected.emit()
+
     
     def run(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
@@ -108,17 +142,22 @@ class ServerThread(QThread):
             
             # wait for a client to connect
             server_socket.listen()
-            self.client_socket, client_addr = server_socket.accept()            
+            self.client_socket, client_addr = server_socket.accept()      
+            self.client_socket.setblocking(False)
             self.sigStatUpdate.emit("server connected to " + str(client_addr))            
             
             while not self.exiting:
+                # send
                 if len(self.sending_jobs):
                     self.__send(self.sending_jobs.pop())
                    
+                # receive
+                rcv = self.__receive()
+                if rcv:
+                    self.sigMsgRcvd.emit([rcv])
+                
                 time.sleep(1e-4)
         
-        self.sigStatUpdate.emit("run method is exiting")
-
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

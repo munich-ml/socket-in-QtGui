@@ -53,6 +53,23 @@ class HTesterTcpIpClient():
         self.socket.setblocking(blocking)
     
 
+    def send(self, obj):
+        """
+        Input <JSON serializable object> obj is serialized to a json string,
+        added to a fixed length header, converted to <bytes>
+        and send to the client socket.
+        """
+        # serialize the object to json
+        json_obj = json.dumps(obj)
+        
+        # create the fixed length header    '0000000022' = 22 bytes
+        header = str(len(json_obj))
+        header = (HEADER_LENGTH - len(header)) * "0" + header
+        
+        # send header + json object
+        self.socket.send(bytes(header+json_obj, CODING))    
+        
+
     def receive(self):
         """
         Receives, deserializes from json and returns the object.
@@ -82,6 +99,8 @@ class HTesterTcpIpClient():
     
 if __name__ == "__main__":
     client = HTesterTcpIpClient(port=PORT_DEFAULT, auto_connect=True)
+    
+    '''
     while True:
         msg = client.receive()
         if msg is not None:
@@ -91,4 +110,4 @@ if __name__ == "__main__":
             break
         
         sleep(0.1)
-    
+    '''
