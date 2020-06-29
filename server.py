@@ -107,7 +107,6 @@ class ServerThread(QThread):
             server_socket.listen()
             self.client_socket, client_addr = server_socket.accept()            
             self.sigStatUpdate.emit("server connected to " + str(client_addr))            
-            self.__send("Welcome to the server")
             
             while not self.exiting:
                 if len(self.sending_jobs):
