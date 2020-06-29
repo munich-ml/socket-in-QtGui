@@ -91,20 +91,10 @@ class Ui_server(object):
         server.setWindowTitle(_translate("server", "I\'m the Server"))
         self.label_2.setText(_translate("server", "echo "))
         self.label.setText(_translate("server", "port "))
-        self.label_3.setText(_translate("server", "respond"))
+        self.label_3.setText(_translate("server", "message"))
         self.label_4.setText(_translate("server", "log"))
         self.lineEditMsg.setText(_translate("server", "hello client"))
         self.buttonSend.setToolTip(_translate("server", "<html><head/><body><p>the GUI will freeze while computing in main thread</p></body></html>"))
         self.buttonSend.setText(_translate("server", "send"))
         self.buttonStartStop.setText(_translate("server", "start stop"))
-
-
-if __name__ == "__main__":
-    import sys
-    app = QtWidgets.QApplication(sys.argv)
-    server = QtWidgets.QMainWindow()
-    ui = Ui_server()
-    ui.setupUi(server)
-    server.show()
-    sys.exit(app.exec_())
 

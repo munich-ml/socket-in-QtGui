@@ -7,6 +7,8 @@ Created on Sun Jun 28 02:00:39 2020
 
 import socket
 import errno
+import json
+from time import sleep
 from server import PORT_DEFAULT, HEADER_LENGTH, CODING
 
 
@@ -53,7 +55,7 @@ class HTesterTcpIpClient():
 
     def receive(self):
         """
-        Receives and returns a message.
+        Receives, deserializes from json and returns the object.
         
         May return None when used "non-blocking"
         """
@@ -61,7 +63,8 @@ class HTesterTcpIpClient():
             try:
                 # Expected message starts with a fixed-length header
                 msg_length = int(self.socket.recv(HEADER_LENGTH).decode(CODING))
-                return self.socket.recv(msg_length).decode(CODING)
+                json_obj = self.socket.recv(msg_length).decode(CODING)
+                return json.loads(json_obj)
 
             except IOError as e:
                 # This is normal on non blocking connections - when there are no incoming data error is going to be raised
@@ -79,4 +82,13 @@ class HTesterTcpIpClient():
     
 if __name__ == "__main__":
     client = HTesterTcpIpClient(port=PORT_DEFAULT, auto_connect=True)
+    while True:
+        msg = client.receive()
+        if msg is not None:
+            print(msg)
+            
+        if msg == "EOP":
+            break
+        
+        sleep(0.1)
     

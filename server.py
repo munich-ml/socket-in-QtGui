@@ -5,6 +5,7 @@ import sys
 import time
 import datetime as dt
 import socket
+import json
 from server_ui import Ui_server
 from PyQt5.QtWidgets import QMainWindow, QApplication
 from PyQt5.QtCore import QThread, pyqtSignal
@@ -22,32 +23,30 @@ class ServerMainWindow(QMainWindow, Ui_server):
         super(ServerMainWindow, self).__init__(parent)
         self.setupUi(self)
         self.spinBoxPort.setValue(PORT_DEFAULT)
-        self.serving = False
-        self.label_start_stop_button()
         self.buttonSend.clicked.connect(self.on_button_send)
         self.buttonStartStop.clicked.connect(self.on_button_start_stop)
         self.checkBoxEcho.stateChanged.connect(self.on_checkbox_echo)
-        self.print_to_log("application started")
-
-    
-    def label_start_stop_button(self):
-        label = {True: "stop", False: "start"}[self.serving]
-        self.buttonStartStop.setText(label)
-
-    
+        
+        # immediatly start serving
+        self.serving = False
+        self.on_button_start_stop()
+        
+        
     def on_button_send(self):
         msg = self.lineEditMsg.text()
         try:
+            self.print_to_log("sending msg '{}'".format(msg))
             self.server.sending_jobs.append(msg)
-            self.print_to_log("sending " + msg)
         except Exception as e:
             self.print_to_log(e)
         
         
-        
     def on_button_start_stop(self):
+        # toggle serving bit
         self.serving = not self.serving
-        self.label_start_stop_button()
+        
+        label = {True: "stop", False: "start"}[self.serving]
+        self.buttonStartStop.setText(label)
         
         if self.serving:  
             self.print_to_log("starting the server")
@@ -83,17 +82,21 @@ class ServerThread(QThread):
         self.sending_jobs = []
 
 
-    def __send(self, msg):
+    def __send(self, obj):
         """
-        Input <str> msg is added to a fixed length header, converted to <bytes>
+        Input <JSON serializable object> obj is serialized to a json string,
+        added to a fixed length header, converted to <bytes>
         and send to the client socket.
         """
-        # create the fixed length header    '00000022' = 22 bytes
+        # serialize the object to json
+        json_obj = json.dumps(obj)
         
-        header = str(len(msg))
+        # create the fixed length header    '0000000022' = 22 bytes
+        header = str(len(json_obj))
         header = (HEADER_LENGTH - len(header)) * "0" + header
         
-        self.client_socket.send(bytes(header+msg, CODING))                
+        # send header + json object
+        self.client_socket.send(bytes(header+json_obj, CODING))                
             
     
     def run(self):
