@@ -1,8 +1,8 @@
 # Goal
-I have an existing Python Qt application and wanted to control it from a Python script. 
+I have an existing Python Qt application and wanted to control it from a Python script or a Jupyter notebook.. 
 
 # Solution
-This socket-in-QtGui project solved that problem by implementing a bidirectional TCP/IP socket connection between the Qt-Gui based server and a script based client.
+This socket-in-QtGui project provides a solution by implementing a bidirectional TCP/IP socket connection between the Qt-Gui based server and a script based client.
 
 # Project content
 ## Server
