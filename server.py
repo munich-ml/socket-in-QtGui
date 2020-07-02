@@ -24,6 +24,7 @@ class ServerMainWindow(QMainWindow, Ui_server):
         super(ServerMainWindow, self).__init__(parent)
         self.setupUi(self)
         self.spinBoxPort.setValue(PORT_DEFAULT)
+        self.lineEditMsg.returnPressed.connect(self.on_button_send)
         self.buttonSend.clicked.connect(self.on_button_send)
         self.buttonStartStop.clicked.connect(self.on_button_start_stop)
         self.checkBoxEcho.stateChanged.connect(self.on_checkbox_echo)

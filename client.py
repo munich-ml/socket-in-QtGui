@@ -15,8 +15,7 @@ from server import PORT_DEFAULT, HEADER_LENGTH, CODING
 class HTesterTcpIpClient():
     def __init__(self, port, auto_connect=True):
         self.port = port
-        self.connected = False
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket = None
         if auto_connect:
             self.connect()   
         
@@ -26,24 +25,25 @@ class HTesterTcpIpClient():
     
     
     def connect(self):
-        if not self.connected:
+        if self.socket is None:
             try:
-                self.set_blocking(True)   # socket must be blocking for connet
+                self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self.socket.connect((socket.gethostname(), self.port))
                 self.set_blocking(False)   # default for this class
                 print("Connected to server", self.socket.getpeername())
-                self.connected = True
                 
             except Exception:
                 print("Could not connect to server.")
-                self.connected = False
-        return self.connected
+                self.socket = None
+    
+        else:
+            print("Already connected!")
     
     
     def disconnect(self):
-        if self.connected:
+        if self.socket is not None:
             self.socket.close()
-            self.connected = False
+            self.socket = None
             
             
     def set_blocking(self, blocking):
@@ -76,7 +76,7 @@ class HTesterTcpIpClient():
         
         May return None when used "non-blocking"
         """
-        if self.connected:
+        if self.socket:
             try:
                 # Expected message starts with a fixed-length header
                 msg_length = int(self.socket.recv(HEADER_LENGTH).decode(CODING))
