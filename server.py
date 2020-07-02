@@ -77,6 +77,8 @@ class ServerMainWindow(QMainWindow, Ui_server):
 
     def incoming_msg(self, msg):
         self.print_to_log("msg received '{}'".format(msg[0]))
+        if self.checkBoxEcho.isChecked():
+            self.server.sending_jobs.append(msg[0])
         
 
 class ServerThread(QThread):
