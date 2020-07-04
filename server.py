@@ -13,7 +13,7 @@ from PyQt5.QtCore import QThread, pyqtSignal
 
 
 CODING = "utf-8"
-PORT_DEFAULT = 1234
+PORT_DEFAULT = 2222
 HEADER_LENGTH = 10     # number of header bytes. Fixed length header
 
 class ServerMainWindow(QMainWindow, Ui_server):
@@ -29,7 +29,7 @@ class ServerMainWindow(QMainWindow, Ui_server):
         self.buttonStartStop.clicked.connect(self.on_button_start_stop)
         self.checkBoxEcho.stateChanged.connect(self.on_checkbox_echo)
         
-        # immediatly start serving
+        # open port at startup
         self.serving = False
         self.on_button_start_stop()
         
@@ -47,18 +47,19 @@ class ServerMainWindow(QMainWindow, Ui_server):
         # toggle serving bit
         self.serving = not self.serving
         
-        label = {True: "stop", False: "start"}[self.serving]
+        label = {True: "close port", False: "open port"}[self.serving]
         self.buttonStartStop.setText(label)
         
         if self.serving:  
-            self.print_to_log("starting the server")
-            self.server = ServerThread(self.spinBoxPort.value())
+            port = self.spinBoxPort.value()
+            self.print_to_log("opening port " + str(port))
+            self.server = ServerThread(port)
             self.server.sigStatUpdate.connect(self.print_to_log)
             self.server.sigMsgRcvd.connect(self.incoming_msg)
             self.server.sigClientDisconnected.connect(self.on_button_start_stop)
             self.server.start()
         else:
-            self.print_to_log("terminating the server")
+            self.print_to_log("closing the port")
             try:
                 self.server.exiting = True
             except Exception as e:
@@ -143,22 +144,32 @@ class ServerThread(QThread):
             # modifiy the socket to allow address reuse
             server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             
-            # wait for a client to connect
+            # prepare connection
+            connected = False
+            server_socket.settimeout(1)
             server_socket.listen()
-            self.client_socket, client_addr = server_socket.accept()      
-            self.client_socket.setblocking(False)
-            self.sigStatUpdate.emit("server connected to " + str(client_addr))            
             
             while not self.exiting:
-                # send
-                if len(self.sending_jobs):
-                    self.__send(self.sending_jobs.pop())
-                   
-                # receive
-                rcv = self.__receive()
-                if rcv:
-                    self.sigMsgRcvd.emit([rcv])
-                
+                if connected:
+                    # send
+                    if len(self.sending_jobs):
+                        self.__send(self.sending_jobs.pop())
+                       
+                    # receive
+                    rcv = self.__receive()
+                    if rcv:
+                        self.sigMsgRcvd.emit([rcv])
+            
+                else:  # wait for a client to connect
+                    try:
+                        self.client_socket, client_addr = server_socket.accept()     
+                        self.client_socket.setblocking(False)
+                        self.sigStatUpdate.emit("server connected to " + str(client_addr))            
+                        connected = True
+                        
+                    except socket.timeout:
+                        pass
+                        
                 time.sleep(1e-4)
         
 
